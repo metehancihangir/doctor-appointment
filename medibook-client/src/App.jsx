@@ -8,8 +8,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PatientLayout from './layouts/PatientLayout';
 import DoctorLayout from './layouts/DoctorLayout';
 
+import AdminLayout from './layouts/AdminLayout';
+
 // Korumalı layout placeholder'ları (Faz 2'de ProtectedRoute ile doldurulacak)
-const AdminLayout   = () => <div>Admin Paneli (Faz 7)</div>;
 const NotFoundPage  = () => <div>404 — Sayfa Bulunamadı</div>;
 
 function App() {
