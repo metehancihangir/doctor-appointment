@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
     public DbSet<DoctorAvailability> DoctorAvailabilities => Set<DoctorAvailability>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,6 +109,26 @@ public class AppDbContext : DbContext
                   .WithMany(d => d.Availabilities)
                   .HasForeignKey(da => da.DoctorId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Appointment tablosu yapılandırması
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.HasOne(a => a.Patient)
+                  .WithMany()
+                  .HasForeignKey(a => a.PatientId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.Doctor)
+                  .WithMany()
+                  .HasForeignKey(a => a.DoctorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(a => a.Status)
+                  .HasConversion<string>()
+                  .IsRequired();
         });
 
         // Seed Data

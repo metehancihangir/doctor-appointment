@@ -74,4 +74,78 @@ public class DoctorsController : ControllerBase
             PageSize = pageSize
         });
     }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<DoctorDetailDto>> GetDoctor(int id)
+    {
+        var doctor = await _context.DoctorProfiles
+            .Include(d => d.User)
+            .Include(d => d.Availabilities)
+            .FirstOrDefaultAsync(d => d.Id == id && d.User.IsActive && d.User.Role == UserRole.Doctor);
+
+        if (doctor == null) return NotFound(new { message = "Doktor bulunamadı." });
+
+        var dto = new DoctorDetailDto
+        {
+            DoctorId = doctor.Id,
+            FullName = $"{doctor.User.FirstName} {doctor.User.LastName}",
+            Specialty = doctor.Specialty,
+            YearsOfExperience = doctor.YearsOfExperience,
+            Bio = doctor.Bio,
+            AvailableDays = doctor.Availabilities.Select(a => (int)a.DayOfWeek).Distinct().ToList()
+        };
+
+        return Ok(dto);
+    }
+
+    [HttpGet("{id}/slots")]
+    public async Task<ActionResult<List<TimeSlotDto>>> GetAvailableSlots(int id, [FromQuery] DateTime date)
+    {
+        // 1. Doktor ve çalışma saatlerini bul
+        var dayOfWeek = date.DayOfWeek;
+        
+        var doctor = await _context.DoctorProfiles
+            .Include(d => d.Availabilities)
+            .FirstOrDefaultAsync(d => d.Id == id && d.User.IsActive && d.User.Role == UserRole.Doctor);
+
+        if (doctor == null) return NotFound(new { message = "Doktor bulunamadı." });
+
+        var availability = doctor.Availabilities.FirstOrDefault(a => a.DayOfWeek == dayOfWeek);
+        if (availability == null)
+        {
+            // O gün çalışmıyor
+            return Ok(new List<TimeSlotDto>());
+        }
+
+        // 2. O güne ait randevuları getir
+        var appointments = await _context.Appointments
+            .Where(a => a.DoctorId == id && 
+                        a.AppointmentDate.Date == date.Date && 
+                        a.Status != AppointmentStatus.Cancelled)
+            .Select(a => a.AppointmentTime)
+            .ToListAsync();
+
+        // 3. Slotları oluştur (30 dk)
+        var slots = new List<TimeSlotDto>();
+        var currentSlot = availability.StartTime;
+
+        while (currentSlot < availability.EndTime)
+        {
+            // Eğer saat bugünse ve geçmişteyse, IsAvailable = false
+            bool isPast = (date.Date == DateTime.Today && currentSlot < DateTime.Now.TimeOfDay);
+            
+            // Eğer o slota ait randevu varsa, IsAvailable = false
+            bool isBooked = appointments.Contains(currentSlot);
+
+            slots.Add(new TimeSlotDto
+            {
+                Time = currentSlot,
+                IsAvailable = !isPast && !isBooked
+            });
+
+            currentSlot = currentSlot.Add(TimeSpan.FromMinutes(30));
+        }
+
+        return Ok(slots);
+    }
 }
