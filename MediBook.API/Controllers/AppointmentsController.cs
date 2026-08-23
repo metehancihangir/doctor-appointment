@@ -9,6 +9,7 @@ using MediBook.API.Data;
 using MediBook.API.DTOs.Appointment;
 using MediBook.API.Models;
 
+
 namespace MediBook.API.Controllers;
 
 [ApiController]
@@ -134,5 +135,103 @@ public class AppointmentsController : ControllerBase
         };
 
         return CreatedAtAction(nameof(CreateAppointment), new { id = appointment.Id }, responseDto);
+    }
+
+    [HttpGet("my")]
+    [Authorize(Roles = "Patient")]
+    public async Task<ActionResult<object>> GetMyAppointments(
+        [FromQuery] string? status, 
+        [FromQuery] DateTime? startDate, 
+        [FromQuery] DateTime? endDate, 
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 10)
+    {
+        var patientIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (patientIdClaim == null) return Unauthorized();
+
+        var userId = int.Parse(patientIdClaim);
+
+        var query = _context.Appointments
+            .Include(a => a.Doctor)
+            .ThenInclude(d => d.User)
+            .Where(a => a.PatientId == userId)
+            .AsQueryable();
+
+        // Filtreleme
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<AppointmentStatus>(status, out var parsedStatus))
+        {
+            query = query.Where(a => a.Status == parsedStatus);
+        }
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(a => a.AppointmentDate >= startDate.Value.Date);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(a => a.AppointmentDate <= endDate.Value.Date);
+        }
+
+        // Sıralama (Yeniden eskiye)
+        query = query.OrderByDescending(a => a.AppointmentDate).ThenByDescending(a => a.AppointmentTime);
+
+        // Sayfalama
+        var totalCount = await query.CountAsync();
+        var appointments = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new PatientAppointmentDto
+            {
+                Id = a.Id,
+                DoctorFullName = $"{a.Doctor.User.FirstName} {a.Doctor.User.LastName}",
+                DoctorSpecialty = a.Doctor.Specialty,
+                AppointmentDate = a.AppointmentDate,
+                AppointmentTime = a.AppointmentTime,
+                Status = a.Status.ToString(),
+                Symptoms = a.Symptoms,
+                CreatedAt = a.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            Appointments = appointments,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        });
+    }
+
+    [HttpPut("{id}/cancel")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> CancelAppointment(int id)
+    {
+        var patientIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (patientIdClaim == null) return Unauthorized();
+
+        var userId = int.Parse(patientIdClaim);
+
+        var appointment = await _context.Appointments.FirstOrDefaultAsync(a => a.Id == id);
+
+        if (appointment == null) 
+            return NotFound(new { message = "Randevu bulunamadı." });
+
+        if (appointment.PatientId != userId)
+            return Forbid(); // Kendi randevusu değilse iptal edemez
+
+        if (appointment.Status != AppointmentStatus.Scheduled && appointment.Status != AppointmentStatus.Confirmed)
+        {
+            return BadRequest(new { message = "Sadece planlanmış veya onaylanmış randevular iptal edilebilir." });
+        }
+
+        appointment.Status = AppointmentStatus.Cancelled;
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        // TODO: SMS bildirimi tetikle (Faz 8)
+        
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Randevunuz başarıyla iptal edildi." });
     }
 }
