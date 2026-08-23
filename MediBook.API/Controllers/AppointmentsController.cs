@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using MediBook.API.Data;
 using MediBook.API.DTOs.Appointment;
 using MediBook.API.Models;
+using MediBook.API.Services;
 
 
 namespace MediBook.API.Controllers;
@@ -18,10 +19,12 @@ namespace MediBook.API.Controllers;
 public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ISmsService _smsService;
 
-    public AppointmentsController(AppDbContext context)
+    public AppointmentsController(AppDbContext context, ISmsService smsService)
     {
         _context = context;
+        _smsService = smsService;
     }
 
     [HttpPost]
@@ -134,6 +137,15 @@ public class AppointmentsController : ControllerBase
             Status = appointment.Status.ToString()
         };
 
+        // SMS Bildirimi
+        var patient = await _context.Users.FindAsync(finalPatientId);
+        if (patient != null && !string.IsNullOrEmpty(patient.PhoneNumber))
+        {
+            var message = $"Sayın {patient.FirstName} {patient.LastName}, {appointment.AppointmentDate:dd.MM.yyyy} {appointment.AppointmentTime:hh\\:mm} tarihli Dr. {doctor.User.FirstName} {doctor.User.LastName} randevunuz oluşturulmuştur. - MediBook";
+            // Fire and forget (Background queue'ya alınabilir ama await ile bekliyoruz ki DB logu oluşsun, hata yutulacak)
+            await _smsService.SendAsync(patient.PhoneNumber, message, patient.Id, appointment.Id);
+        }
+
         return CreatedAtAction(nameof(CreateAppointment), new { id = appointment.Id }, responseDto);
     }
 
@@ -228,10 +240,16 @@ public class AppointmentsController : ControllerBase
         appointment.Status = AppointmentStatus.Cancelled;
         appointment.UpdatedAt = DateTime.UtcNow;
 
-        // TODO: SMS bildirimi tetikle (Faz 8)
-        
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Randevunuz başarıyla iptal edildi." });
+        // SMS Bildirimi
+        var patient = await _context.Users.FindAsync(appointment.PatientId);
+        if (patient != null && !string.IsNullOrEmpty(patient.PhoneNumber))
+        {
+            var message = $"Sayın {patient.FirstName} {patient.LastName}, {appointment.AppointmentDate:dd.MM.yyyy} {appointment.AppointmentTime:hh\\:mm} tarihli randevunuz iptal edilmiştir. - MediBook";
+            await _smsService.SendAsync(patient.PhoneNumber, message, patient.Id, appointment.Id);
+        }
+
+        return Ok(new { success = true, message = "Randevu iptal edildi." });
     }
 }

@@ -5,6 +5,7 @@ using System.Security.Claims;
 using MediBook.API.Data;
 using MediBook.API.DTOs.Doctor;
 using MediBook.API.Models;
+using MediBook.API.Services;
 
 namespace MediBook.API.Controllers;
 
@@ -14,10 +15,12 @@ namespace MediBook.API.Controllers;
 public class DoctorAppointmentsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ISmsService _smsService;
 
-    public DoctorAppointmentsController(AppDbContext context)
+    public DoctorAppointmentsController(AppDbContext context, ISmsService smsService)
     {
         _context = context;
+        _smsService = smsService;
     }
 
     private int GetDoctorIdFromToken()
@@ -135,7 +138,11 @@ public class DoctorAppointmentsController : ControllerBase
         var doctorId = GetDoctorIdFromToken();
         if (doctorId == 0) return Forbid();
 
-        var appointment = await _context.Appointments.FirstOrDefaultAsync(a => a.Id == id);
+        var appointment = await _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+                .ThenInclude(d => d.User)
+            .FirstOrDefaultAsync(a => a.Id == id);
         if (appointment == null) return NotFound(new { message = "Randevu bulunamadı." });
         if (appointment.DoctorId != doctorId) return Forbid();
 
@@ -156,11 +163,35 @@ public class DoctorAppointmentsController : ControllerBase
                 return BadRequest(new { message = "Onaylanmış randevu sadece Tamamlandı veya İptal Edildi olarak değiştirilebilir." });
         }
 
-        appointment.Status = request.Status;
+        var parsedStatus = request.Status;
+        appointment.Status = parsedStatus;
         appointment.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        return Ok(new { message = "Durum başarıyla güncellendi." });
+
+        // SMS Bildirimi
+        var patient = appointment.Patient;
+        if (patient != null && !string.IsNullOrEmpty(patient.PhoneNumber))
+        {
+            var doctorName = $"{appointment.Doctor.User.FirstName} {appointment.Doctor.User.LastName}";
+            string message = string.Empty;
+
+            if (parsedStatus == AppointmentStatus.Confirmed)
+            {
+                message = $"Sayın {patient.FirstName} {patient.LastName}, {appointment.AppointmentDate:dd.MM.yyyy} {appointment.AppointmentTime:hh\\:mm} tarihli randevunuz Dr. {doctorName} tarafından onaylanmıştır. - MediBook";
+            }
+            else if (parsedStatus == AppointmentStatus.Cancelled)
+            {
+                message = $"Sayın {patient.FirstName} {patient.LastName}, {appointment.AppointmentDate:dd.MM.yyyy} {appointment.AppointmentTime:hh\\:mm} tarihli randevunuz iptal edilmiştir. - MediBook";
+            }
+
+            if (!string.IsNullOrEmpty(message))
+            {
+                await _smsService.SendAsync(patient.PhoneNumber, message, patient.Id, appointment.Id);
+            }
+        }
+
+        return Ok(new { success = true, message = "Randevu durumu güncellendi." });
     }
 
     [HttpPut("appointments/{id}/notes")]

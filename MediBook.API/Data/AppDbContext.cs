@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
     public DbSet<DoctorAvailability> DoctorAvailabilities => Set<DoctorAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<SmsLog> SmsLogs => Set<SmsLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -129,6 +130,25 @@ public class AppDbContext : DbContext
             entity.Property(a => a.Status)
                   .HasConversion<string>()
                   .IsRequired();
+        });
+
+        // SmsLog tablosu yapılandırması
+        modelBuilder.Entity<SmsLog>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+
+            entity.HasOne(s => s.User)
+                  .WithMany()
+                  .HasForeignKey(s => s.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(s => s.Appointment)
+                  .WithMany()
+                  .HasForeignKey(s => s.AppointmentId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(s => s.Message).IsRequired().HasMaxLength(500);
+            entity.Property(s => s.ErrorMessage).HasMaxLength(500);
         });
 
         // Seed Data
