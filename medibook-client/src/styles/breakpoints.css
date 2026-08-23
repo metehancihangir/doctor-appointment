@@ -1,0 +1,40 @@
+/* ═══════════════════════════════════════════════════════════
+   MediBook — Breakpoint Sistemi (Mobile-First)
+   
+   Kural: CSS her zaman mobil (0px) için yazılır.
+   Büyük ekranlar için min-width media query kullanılır.
+   ASLA max-width kullanma!
+   ═══════════════════════════════════════════════════════════ */
+
+/* Mobil: 0 - 479px → varsayılan, media query gerekmez */
+
+/* Tablet (küçük): 480px ve üzeri */
+/* @media (min-width: 480px) { } */
+
+/* Tablet (büyük) / Küçük masaüstü: 768px ve üzeri */
+/* @media (min-width: 768px) { } */
+
+/* Masaüstü: 1024px ve üzeri */
+/* @media (min-width: 1024px) { } */
+
+/* Geniş ekran: 1280px ve üzeri */
+/* @media (min-width: 1280px) { } */
+
+/* ─── Global Container ──────────────────────────────────── */
+.container {
+  width: 100%;
+  padding: 0 1rem; /* Mobil: iki yandan iç boşluk */
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
