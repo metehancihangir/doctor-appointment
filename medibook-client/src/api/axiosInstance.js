@@ -5,26 +5,61 @@ const api = axios.create({
   withCredentials: true, // HttpOnly cookie (refresh token) için gerekli
 });
 
+let accessToken = null;
+
+export const setApiAccessToken = (token) => {
+  accessToken = token;
+};
+
 // ─── Request Interceptor ─────────────────────────────────────────
-// Her isteğe Authorization header ekler
-// Access token memory'de (AuthContext'te) tutulur
 api.interceptors.request.use(
   (config) => {
-    // Access token AuthContext'ten gelecek (Faz 2'de doldurulacak)
-    // const token = getAccessToken();
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
 // ─── Response Interceptor ────────────────────────────────────────
-// 401 → refresh token → başarısız isteği tekrar dene
-// (Faz 2'de tam implementasyon yapılacak)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Faz 2'de: 401 alınırsa /auth/refresh çağır, başarısızsa logout
+    const originalRequest = error.config;
+
+    // Retry only once for 401
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't retry if the failed request was a refresh or login
+      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login') {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        const refreshResponse = await axios.post(
+          'http://localhost:5000/api/v1/auth/refresh',
+          {},
+          { withCredentials: true }
+        );
+
+        const newToken = refreshResponse.data.accessToken;
+        setApiAccessToken(newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        
+        // Notify any listeners (like AuthContext) that token was updated
+        window.dispatchEvent(new CustomEvent('auth:token_refreshed', { detail: newToken }));
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, user should be logged out
+        setApiAccessToken(null);
+        window.dispatchEvent(new Event('auth:logout'));
+        return Promise.reject(refreshError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
