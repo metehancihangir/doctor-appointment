@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+    public DbSet<DoctorAvailability> DoctorAvailabilities => Set<DoctorAvailability>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,5 +83,74 @@ public class AppDbContext : DbContext
                   .HasForeignKey(r => r.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+        // DoctorProfile tablosu yapılandırması
+        modelBuilder.Entity<DoctorProfile>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+
+            entity.HasIndex(d => d.UserId)
+                  .IsUnique();
+
+            entity.HasOne(d => d.User)
+                  .WithOne()
+                  .HasForeignKey<DoctorProfile>(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(d => d.Specialty).IsRequired().HasMaxLength(100);
+        });
+
+        // DoctorAvailability tablosu yapılandırması
+        modelBuilder.Entity<DoctorAvailability>(entity =>
+        {
+            entity.HasKey(da => da.Id);
+
+            entity.HasOne(da => da.Doctor)
+                  .WithMany(d => d.Availabilities)
+                  .HasForeignKey(da => da.DoctorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Seed Data
+        modelBuilder.Entity<User>().HasData(
+            new User
+            {
+                Id = 1,
+                FirstName = "Admin",
+                LastName = "User",
+                Email = "admin@medibook.com",
+                PasswordHash = "$2a$11$u.qPMhhQIaPyXHlzLKp/RO6M1AS1i2sxA8Oh9FH5SpdDD7N9HCU4W",
+                Role = UserRole.Admin,
+                IsActive = true
+            },
+            new User
+            {
+                Id = 2,
+                FirstName = "Ali",
+                LastName = "Veli",
+                Email = "doctor@medibook.com",
+                PasswordHash = "$2a$11$8TsgEZsdUleMGfoZUHwh3u54lSwKl.eHdapmkgb5Flu.U2svkIm72",
+                Role = UserRole.Doctor,
+                IsActive = true
+            }
+        );
+
+        modelBuilder.Entity<DoctorProfile>().HasData(
+            new DoctorProfile
+            {
+                Id = 1,
+                UserId = 2, // Ali Veli
+                Specialty = "Pediatri",
+                Bio = "Çocuk hastalıkları uzmanı.",
+                YearsOfExperience = 5
+            }
+        );
+
+        modelBuilder.Entity<DoctorAvailability>().HasData(
+            new DoctorAvailability { Id = 1, DoctorId = 1, DayOfWeek = DayOfWeek.Monday, StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0) },
+            new DoctorAvailability { Id = 2, DoctorId = 1, DayOfWeek = DayOfWeek.Tuesday, StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0) },
+            new DoctorAvailability { Id = 3, DoctorId = 1, DayOfWeek = DayOfWeek.Wednesday, StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0) },
+            new DoctorAvailability { Id = 4, DoctorId = 1, DayOfWeek = DayOfWeek.Thursday, StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0) },
+            new DoctorAvailability { Id = 5, DoctorId = 1, DayOfWeek = DayOfWeek.Friday, StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0) }
+        );
     }
 }
