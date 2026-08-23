@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDoctorAppointments } from '../../hooks/useDoctorAppointments';
 import AppointmentDetailModal from '../../components/AppointmentDetailModal';
+import SkeletonCard from '../../components/SkeletonCard';
 import './DoctorDashboard.css';
 
 const DoctorDashboard = () => {
@@ -132,7 +133,11 @@ const DoctorDashboard = () => {
           </div>
 
           {isLoading ? (
-            <div className="loading-state">Yükleniyor...</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+               <SkeletonCard variant="appointment" />
+               <SkeletonCard variant="appointment" />
+               <SkeletonCard variant="appointment" />
+            </div>
           ) : error ? (
             <div className="error-state">{error}</div>
           ) : appointments.length === 0 ? (

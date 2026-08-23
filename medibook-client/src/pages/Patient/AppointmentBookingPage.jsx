@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axiosInstance';
 import DoctorProfileCard from '../../components/DoctorProfileCard';
 import SlotGrid from '../../components/SlotGrid';
+import SkeletonCard from '../../components/SkeletonCard';
 import { useAvailableSlots } from '../../hooks/useAvailableSlots';
+import { useToast } from '../../context/ToastContext';
 import './AppointmentBookingPage.css';
 
 const AppointmentBookingPage = () => {
@@ -12,6 +14,7 @@ const AppointmentBookingPage = () => {
 
   const [doctor, setDoctor] = useState(null);
   const [loadingDoctor, setLoadingDoctor] = useState(true);
+  const { showToast } = useToast();
   
   // Multi-step form state
   const [step, setStep] = useState(1);
@@ -21,7 +24,6 @@ const AppointmentBookingPage = () => {
   const [notes, setNotes] = useState('');
   
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { slots, loading: slotsLoading, error: slotsError } = useAvailableSlots(doctorId, selectedDate);
@@ -33,6 +35,7 @@ const AppointmentBookingPage = () => {
         setDoctor(response.data);
       } catch (err) {
         console.error('Doktor detayı alınamadı', err);
+        showToast('Doktor bilgileri alınamadı.', 'error');
         // Hata durumunda ana sayfaya dön
         navigate('/patient');
       } finally {
@@ -71,7 +74,6 @@ const AppointmentBookingPage = () => {
     if (!selectedDate || !selectedSlot) return;
 
     setSubmitting(true);
-    setSubmitError(null);
 
     const formattedDate = selectedDate.toISOString().split('T')[0];
 
@@ -90,14 +92,19 @@ const AppointmentBookingPage = () => {
       }, 2500);
 
     } catch (err) {
-      setSubmitError(err.response?.data?.message || 'Randevu oluşturulurken bir hata oluştu.');
+      showToast(err.response?.data?.message || 'Randevu oluşturulurken bir hata oluştu.', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loadingDoctor) {
-    return <div className="loading-container">Doktor bilgileri yükleniyor...</div>;
+    return (
+      <div className="appointment-booking-page container">
+         <h1>Randevu Al</h1>
+         <SkeletonCard variant="doctor" />
+      </div>
+    );
   }
 
   const availableDates = generateDates().filter(d => 
@@ -192,8 +199,6 @@ const AppointmentBookingPage = () => {
                   rows="2"
                 ></textarea>
               </div>
-
-              {submitError && <div className="alert alert-error">{submitError}</div>}
 
               <button 
                 type="submit" 
