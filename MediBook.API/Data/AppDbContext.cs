@@ -8,6 +8,8 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +52,34 @@ public class AppDbContext : DbContext
 
             // CreatedAt: uygulama tarafında atanır (DateTime.UtcNow)
             // MySQL strict mode ile uyum için SQL default kullanılmıyor
+        });
+
+        // PatientProfile tablosu yapılandırması
+        modelBuilder.Entity<PatientProfile>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            
+            entity.HasIndex(p => p.UserId)
+                  .IsUnique(); // 1-to-1 relationship
+
+            entity.HasOne(p => p.User)
+                  .WithOne()
+                  .HasForeignKey<PatientProfile>(p => p.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // RefreshToken tablosu yapılandırması
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            entity.HasIndex(r => r.Token)
+                  .IsUnique();
+
+            entity.HasOne(r => r.User)
+                  .WithMany()
+                  .HasForeignKey(r => r.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
