@@ -72,7 +72,11 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ─── Controller & OpenAPI (built-in .NET 10) ──────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddOpenApi();
 
 // ─── Uygulama Pipeline ─────────────────────────────────────────────────────
@@ -88,7 +92,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 
-app.UseRateLimiter();
+// app.UseRateLimiter(); // Şimdilik devre dışı bırakıldı
 
 app.UseAuthentication();
 app.UseAuthorization();

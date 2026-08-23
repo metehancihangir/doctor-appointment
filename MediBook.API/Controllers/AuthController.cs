@@ -80,7 +80,7 @@ namespace MediBook.API.Controllers
         }
 
         [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicy")]
+        // [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
