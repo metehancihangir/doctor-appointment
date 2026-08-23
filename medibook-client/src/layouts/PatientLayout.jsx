@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import DoctorsPage from '../pages/Patient/DoctorsPage';
+import AppointmentBookingPage from '../pages/Patient/AppointmentBookingPage';
 import { useAuth } from '../context/AuthContext';
 import './PatientLayout.css';
 
@@ -20,8 +21,7 @@ const PatientLayout = () => {
       <main className="patient-content">
         <Routes>
           <Route path="doctors" element={<DoctorsPage />} />
-          {/* Gelecek sayfa: appointment */}
-          <Route path="appointment/:id" element={<div>Randevu Ekranı (Faz 4)</div>} />
+          <Route path="appointment/:doctorId" element={<AppointmentBookingPage />} />
           
           <Route path="" element={<Navigate to="doctors" replace />} />
         </Routes>
