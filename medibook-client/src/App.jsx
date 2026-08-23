@@ -6,9 +6,9 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import PatientLayout from './layouts/PatientLayout';
+import DoctorLayout from './layouts/DoctorLayout';
 
 // Korumalı layout placeholder'ları (Faz 2'de ProtectedRoute ile doldurulacak)
-const DoctorLayout  = () => <div>Doktor Paneli (Faz 6)</div>;
 const AdminLayout   = () => <div>Admin Paneli (Faz 7)</div>;
 const NotFoundPage  = () => <div>404 — Sayfa Bulunamadı</div>;
 
