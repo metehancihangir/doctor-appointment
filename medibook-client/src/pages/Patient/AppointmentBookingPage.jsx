@@ -86,8 +86,7 @@ const AppointmentBookingPage = () => {
 
       setShowSuccess(true);
       setTimeout(() => {
-        // Geçici olarak ana sayfaya yönlendiriyoruz, dashboard yapılınca '/patient/dashboard' olacak
-        navigate('/patient');
+        navigate('/patient/dashboard');
       }, 2500);
 
     } catch (err) {
