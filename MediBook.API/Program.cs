@@ -80,6 +80,9 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 // ─── Uygulama Pipeline ─────────────────────────────────────────────────────
+builder.Services.AddScoped<ISmsService, TwilioSmsService>();
+builder.Services.AddHostedService<AppointmentReminderService>();
+
 var app = builder.Build();
 
 // Global hata yakalama middleware'i (pipeline'ın en başında olmalı)
