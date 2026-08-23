@@ -3,6 +3,7 @@ import useDoctors from '../../hooks/useDoctors';
 import SearchFilter from '../../components/SearchFilter';
 import DoctorCard from '../../components/DoctorCard';
 import Pagination from '../../components/Pagination';
+import SkeletonCard from '../../components/SkeletonCard';
 import './DoctorsPage.css';
 
 const DoctorsPage = () => {
@@ -49,9 +50,13 @@ const DoctorsPage = () => {
       {error && <div className="error-alert">{error}</div>}
 
       {isLoading ? (
-        <div className="loading-container">
-          <span className="spinner"></span>
-          <p>Doktorlar yükleniyor...</p>
+        <div className="doctors-grid">
+          <SkeletonCard variant="doctor" />
+          <SkeletonCard variant="doctor" />
+          <SkeletonCard variant="doctor" />
+          <SkeletonCard variant="doctor" />
+          <SkeletonCard variant="doctor" />
+          <SkeletonCard variant="doctor" />
         </div>
       ) : (
         <>

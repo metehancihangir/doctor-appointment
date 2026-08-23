@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { usePatientAppointments } from '../../hooks/usePatientAppointments';
 import AppointmentCard from '../../components/AppointmentCard';
 import CancelModal from '../../components/CancelModal';
+import SkeletonCard from '../../components/SkeletonCard';
 import api from '../../api/axiosInstance';
+import { useToast } from '../../context/ToastContext';
 import './PatientDashboard.css';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { 
     appointments, 
     totalCount, 
@@ -38,8 +41,9 @@ const PatientDashboard = () => {
       setCancelModalOpen(false);
       setSelectedAppointment(null);
       refresh(); // Listeyi güncelle
+      showToast('Randevu başarıyla iptal edildi.', 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'İptal işlemi sırasında bir hata oluştu.');
+      showToast(err.response?.data?.message || 'İptal işlemi sırasında bir hata oluştu.', 'error');
     } finally {
       setIsCanceling(false);
     }
@@ -101,7 +105,11 @@ const PatientDashboard = () => {
 
       <div className="appointments-list-container">
         {isLoading ? (
-          <div className="loading-state">Randevular yükleniyor...</div>
+          <div className="appointments-grid">
+            <SkeletonCard variant="appointment" />
+            <SkeletonCard variant="appointment" />
+            <SkeletonCard variant="appointment" />
+          </div>
         ) : error ? (
           <div className="error-state">{error}</div>
         ) : appointments.length === 0 ? (

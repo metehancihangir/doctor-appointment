@@ -7,8 +7,22 @@ using MediBook.API.Middleware;
 using MediBook.API.Services;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Serilog;
+using Microsoft.AspNetCore.Mvc;
+using MediBook.API.Common;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ─── Serilog Yapılandırması ────────────────────────────────────────────────
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Warning() // Sadece Warning ve üzeri hatalar (Hata Yönetimi fazına uygun)
+    .WriteTo.Console()
+    .WriteTo.File($"logs/medibook-{DateTime.Now:yyyy-MM-dd}.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // ─── Veritabanı ────────────────────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -76,7 +90,26 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // FluentValidation ve ModelState hatalarını standart API yanıtına dönüştür
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value.Errors.Count > 0)
+                .SelectMany(x => x.Value.Errors)
+                .Select(x => x.ErrorMessage)
+                .ToList();
+
+            var response = ApiResponse.Fail("Doğrulama hatası", errors);
+            return new BadRequestObjectResult(response);
+        };
     });
+
+// ─── FluentValidation ──────────────────────────────────────────────────────
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddOpenApi();
 
 // ─── Uygulama Pipeline ─────────────────────────────────────────────────────
@@ -92,6 +125,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi(); // /openapi/v1.json endpoint'i
 }
+else
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
 
 app.UseCors("FrontendPolicy");
 

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axiosInstance';
+import SkeletonCard from '../../components/SkeletonCard';
+import { useToast } from '../../context/ToastContext';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [dailyStats, setDailyStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -19,6 +22,7 @@ const AdminDashboard = () => {
         setDailyStats(dailyRes.data);
       } catch (error) {
         console.error("Dashboard verileri çekilemedi:", error);
+        showToast("Dashboard verileri çekilemedi.", "error");
       } finally {
         setLoading(false);
       }
@@ -27,8 +31,28 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  if (loading) return <div className="loading">Yükleniyor...</div>;
-  if (!stats) return <div className="error">Veri bulunamadı.</div>;
+  if (loading) {
+    return (
+      <div className="admin-dashboard">
+        <header className="page-header">
+          <h1>Sistem Özeti</h1>
+        </header>
+        <div className="stats-grid">
+           <SkeletonCard variant="appointment" />
+           <SkeletonCard variant="appointment" />
+           <SkeletonCard variant="appointment" />
+           <SkeletonCard variant="appointment" />
+        </div>
+      </div>
+    );
+  }
+  
+  if (!stats) return (
+    <div className="empty-state">
+      <div className="empty-icon">⚠️</div>
+      <h3>Veri bulunamadı.</h3>
+    </div>
+  );
 
   return (
     <div className="admin-dashboard">
