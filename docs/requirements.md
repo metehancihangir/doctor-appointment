@@ -178,7 +178,8 @@ Scheduled → Confirmed → Completed
 
 ## 11. Kapsam Dışı / İleride Eklenebilecekler (Future Scope)
 
-- Email/SMS bildirim sistemi (randevu onayı, hatırlatma) — **şu an kapsam dışı, isteğe bağlı ileride eklenebilir**
+- Email bildirim sistemi (randevu onayı, hatırlatma) — **şu an kapsam dışı, ileride eklenebilir**
+- **SMS bildirim sistemi** — **KAPSAM İÇİ** (bkz. §15 SMS Bildirim Entegrasyonu)
 - Online ödeme entegrasyonu
 - Video görüşme (tele-tıp) desteği
 - Doktor değerlendirme/yorum sistemi
@@ -232,10 +233,38 @@ Responsive uyum açısından daha kolay ölçeklendiği için **Seçenek A** (ü
 | Rol | Email | Not |
 |---|---|---|
 | Admin | admin@medibook.com | Tam sistem erişimi (kullanıcı, doktor, randevu yönetimi) |
-| Doctor | (seed ile oluşturulacak) | Uzmanlık: Pediatri — doktor panelini test etmek için |
+| Doctor | (seed ile oluşturulacak) | Uzmanlık: Pediatri — doktor panelini test etmek için — Şifre: `password123` |
 | Patient | (seed ile oluşturulacak) | Randevu alma/görüntüleme akışını test etmek için |
 
 > Bu hesaplar yalnızca Development ortamında EF Core seed data ile oluşturulacak; Production ortamında yer almayacaktır.
+
+---
+
+## 15. SMS Bildirim Entegrasyonu
+
+### Servis: Twilio (Ücretsiz Trial Tier)
+
+- **Neden Twilio?** En yaygın kullanılan SMS API'si; ücretsiz trial hesapla başlangıç kredisi sağlar (doğrulanmış numaralara SMS gönderilebilir).
+- **Ücretsiz Kısıtlamalar:** Trial hesapta yalnızca doğrulanmış telefon numaralarına SMS gönderilebilir; production için ücretli plana geçiş gerekir.
+- **Alternatifler:**
+  - **TextBelt** — günde 1 ücretsiz SMS, basit REST API
+  - **Vonage (Nexmo)** — ücretsiz trial kredisi, Twilio'ya benzer API yapısı
+
+### Tetiklenecek SMS Olayları
+
+| Olay | Alıcı | İçerik |
+|---|---|---|
+| Randevu oluşturuldu | Hasta | Tarih, saat, doktor adı bilgisi |
+| Randevu onaylandı (Confirmed) | Hasta | Onay bildirimi |
+| Randevu iptal edildi | Hasta | İptal bildirimi |
+| Randevu hatırlatması | Hasta | Randevudan 24 saat önce otomatik hatırlatma |
+
+### Teknik Notlar
+
+- Backend'de `Twilio.AspNet.Core` NuGet paketi kullanılacak
+- Twilio kimlik bilgileri (`AccountSid`, `AuthToken`, `FromNumber`) `appsettings.json` içinde saklanacak ve ortam değişkenleri (environment variables) ile yönetilecek
+- SMS gönderimi asenkron olarak yapılacak (randevu işlemini bloke etmemek için)
+- Production'a geçişte Twilio hesabı upgrade edilmeli veya alternatif bir servis değerlendirilmelidir
 
 ---
 
