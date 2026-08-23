@@ -1,0 +1,18 @@
+# MediBook — .gitignore
+
+# ─── Backend (ASP.NET Core) ──────────────────────────────────
+MediBook.API/bin/
+MediBook.API/obj/
+MediBook.API/appsettings.Development.json
+
+# Frontend (Vite / Node)
+medibook-client/node_modules/
+medibook-client/dist/
+
+# IDE / OS
+.vscode/
+.idea/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
